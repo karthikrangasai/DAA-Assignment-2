@@ -51,10 +51,9 @@ vector<vector<vector<big_pp> > > computeLeastSquareErrors(const vector<Point> &p
     vector<vector<big_pp> > pre_a(n + 1, vector<big_pp>(n + 1, 0.0));
     vector<vector<big_pp> > pre_b(n + 1, vector<big_pp>(n + 1, 0.0));
     vector<vector<big_pp> > leastSquareErrors(n + 1, vector<big_pp>(n + 1, 0.0));
-    // vector<vector<big_pp> > leastSquareErrors_test(n + 1, vector<big_pp>(n + 1, 0.0));
 
     for (unsigned int i = 1; i <= n; ++i) {
-        for (unsigned int j = 1; j <= i; ++j) {
+        for (unsigned int j = 1; j < i; ++j) {
             unsigned int num = i - j + 1;
 
             big_pp X_sum_segment = pre_X_sum[i] - pre_X_sum[j - 1];
@@ -63,17 +62,8 @@ vector<vector<vector<big_pp> > > computeLeastSquareErrors(const vector<Point> &p
             big_pp X_2_sum_segment = pre_X_2_sum[i] - pre_X_2_sum[j - 1];
             big_pp Y_2_sum_segment = pre_Y_2_sum[i] - pre_Y_2_sum[j - 1];
 
-            if (num == 1) {
-                pre_a[j][i] = 0;
-            } else {
-                pre_a[j][i] = (((num * XY_sum_segment) - (X_sum_segment * Y_sum_segment)) / ((num * X_2_sum_segment) - (X_sum_segment * X_sum_segment)));
-            }
-
+            pre_a[j][i] = (((num * XY_sum_segment) - (X_sum_segment * Y_sum_segment)) / ((num * X_2_sum_segment) - (X_sum_segment * X_sum_segment)));
             pre_b[j][i] = (Y_sum_segment - pre_a[j][i] * X_sum_segment) / num;
-
-            // for (unsigned int k = j; k <= i; ++k) {
-            //     leastSquareErrors_test[j][i] += (points[k - 1].y - pre_a[j][i] * points[k - 1].x - pre_b[j][i]) * (points[k - 1].y - pre_a[j][i] * points[k - 1].x - pre_b[j][i]);
-            // }
 
             big_pp _a2x2 = pre_a[j][i] * pre_a[j][i] * X_2_sum_segment;
             big_pp _2axy = 2 * pre_a[j][i] * XY_sum_segment;
@@ -85,15 +75,6 @@ vector<vector<vector<big_pp> > > computeLeastSquareErrors(const vector<Point> &p
             leastSquareErrors[j][i] = (_a2x2) - (_2axy) - (_2by) + (_nb2) + (_y2) + (_2abx);
         }
     }
-
-    // // Frobenius Norm Test
-    // big_pp error = 0.0;
-    // for (unsigned int i = 0; i <= n; ++i) {
-    //     for (unsigned int j = 0; j <= n; ++j) {
-    //         error += (leastSquareErrors_test[j][i] - leastSquareErrors[j][i]) * (leastSquareErrors_test[j][i] - leastSquareErrors[j][i]);
-    //     }
-    // }
-    // error = sqrt(error);
 
     return {leastSquareErrors, pre_a, pre_b};
 }
@@ -108,25 +89,37 @@ vector<Segment> segmentedLeastSquares(unsigned int n, vector<Point> points, big_
     vector<vector<big_pp> > pre_a = preCalcValues[1];
     vector<vector<big_pp> > pre_b = preCalcValues[2];
 
-    vector<big_pp> OPT(n + 1, 0.0);
+    vector<big_pp> OPT(n + 1, 0);
     vector<unsigned int> parent(n + 1);
     for (unsigned int i = 1; i <= n; ++i) {
         OPT[i] = leastSquareErrors[1][i] + c;
         parent[i] = 1;
-        for (unsigned int j = 1; j < i; ++j) {
-            big_pp temp = OPT[j] + leastSquareErrors[j][i] + c;
+        for (unsigned int j = 2; j <= i; ++j) {
+            big_pp temp = OPT[j - 1] + leastSquareErrors[j][i] + c;
             if (temp < OPT[i]) {
                 OPT[i] = temp;
                 parent[i] = j;
             }
         }
     }
-
     // Storing index of the OPT array
-    vector<unsigned int> Lines;
-    // vector<Point> endPts;
-
-    vector<Segment> endPts;
+    vector<Segment> Segments;
+    unsigned int cur = n;
+    while(cur > 1){
+      int nxt = parent[cur];
+      if(nxt == cur){
+        Segments.push_back(Segment(points[cur-1].x, points[cur-1].y, points[cur].x, points[cur].y));
+      }
+      else{
+        big_pp x1 = points[nxt].x;
+        big_pp y1 = pre_a[nxt][cur] * x1 + pre_b[nxt][cur];
+        big_pp x2 = points[cur].x;
+        big_pp y2 = pre_a[nxt][cur] * x2 + pre_b[nxt][cur];
+        Segments.push_back(Segment(x1, y1, x2, y2));
+      }
+      cur = nxt - 1;
+    }
+    return Segments;
     // unsigned int cur = n, seg_num = 1;
     // while (true) {
     //     // Lines.push_back(cur);
@@ -152,32 +145,6 @@ vector<Segment> segmentedLeastSquares(unsigned int n, vector<Point> points, big_
     //     }
     //     ++seg_num;
     // }
-
-    unsigned int cur = n, seg_num = 1;
-    while (true) {
-        Lines.push_back(cur);
-        if (cur == 1) break;
-        cur = parent[cur];
-    }
-
-    /* INTERSECTION */
-    reverse(Lines.begin(), Lines.end());
-    vector<Segment> ab;
-
-    vector<Point> endPts;
-    endPts.push_back(Segment(points[0].x, pre_b[Lines[0]][Lines[1]], points[Lines[1]]));
-    // Generate the segments for visualisation
-    for (unsigned int i = 0; i + 2 < Lines.size(); ++i) {
-        // ab.push_back(make_pair(pre_a[Lines[i]][Lines[i + 1]], pre_b[Lines[i]][Lines[i + 1]]));
-        big_pp m1 = pre_a[Lines[i]][Lines[i + 1]];
-        big_pp c1 = pre_b[Lines[i]][Lines[i + 1]];
-        big_pp m2 = pre_a[Lines[i + 1]][Lines[i + 2]];
-        big_pp c2 = pre_b[Lines[i + 1]][Lines[i + 2]];
-        endPts.push_back(intersection(m1, c1, m2, c2));
-        // big_pp x1, x2;
-        // ab.push_back(Segment(x1, x2, m, c));
-    }
-    return endPts;
 }
 
 int main(int argc, char const *argv[]) {
