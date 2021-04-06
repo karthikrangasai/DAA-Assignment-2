@@ -83,7 +83,7 @@ Point intersection(big_pp m1, big_pp c1, big_pp m2, big_pp c2) {
     return Point(((c1 - c2) / (m2 - m1)), ((c1 * m2 - c2 * m1) / (m2 - m1)));
 }
 
-vector<Segment> segmentedLeastSquares(unsigned int n, vector<Point> points, big_pp c) {
+pair<big_pp, vector<Segment> > segmentedLeastSquares(unsigned int n, vector<Point> points, big_pp c) {
     vector<vector<vector<big_pp> > > preCalcValues = computeLeastSquareErrors(points, n);
     vector<vector<big_pp> > leastSquareErrors = preCalcValues[0];
     vector<vector<big_pp> > pre_a = preCalcValues[1];
@@ -107,19 +107,25 @@ vector<Segment> segmentedLeastSquares(unsigned int n, vector<Point> points, big_
     unsigned int cur = n;
     while(cur > 1){
       int nxt = parent[cur];
+      // cout<<cur<<' '<<nxt<<'\n';
+      // cout<<pre_a[nxt][cur]<<' '<<pre_b[nxt][cur]<<'\n';
       if(nxt == cur){
-        Segments.push_back(Segment(points[cur-1].x, points[cur-1].y, points[cur].x, points[cur].y));
+        Segments.push_back(Segment(points[cur-2].x, points[cur-2].y, points[cur-1].x, points[cur-1].y));
       }
       else{
-        big_pp x1 = points[nxt].x;
+        big_pp x1 = points[nxt-1].x;
         big_pp y1 = pre_a[nxt][cur] * x1 + pre_b[nxt][cur];
-        big_pp x2 = points[cur].x;
+        big_pp x2 = points[cur-1].x;
         big_pp y2 = pre_a[nxt][cur] * x2 + pre_b[nxt][cur];
         Segments.push_back(Segment(x1, y1, x2, y2));
       }
       cur = nxt - 1;
     }
-    return Segments;
+    if(cur == 1){
+      //means our beloved point 1 is not included in any line
+      Segments.push_back(Segment(points[cur-1].x, points[cur-1].y, points[cur].x, points[cur].y));
+    }
+    return make_pair(OPT[n], Segments);
     // unsigned int cur = n, seg_num = 1;
     // while (true) {
     //     // Lines.push_back(cur);
@@ -150,6 +156,7 @@ vector<Segment> segmentedLeastSquares(unsigned int n, vector<Point> points, big_
 int main(int argc, char const *argv[]) {
     if (argc != 3) {
         cout << "Check number of inputs again.\n";
+        return 0;
     }
 
     freopen(argv[1], "r", stdin);
@@ -167,13 +174,13 @@ int main(int argc, char const *argv[]) {
     c = fabs(c);
 
     sort(points.begin(), points.end());
-    vector<Segment> segments = segmentedLeastSquares(n, points, c);
+    pair<big_pp, vector<Segment> > Result= segmentedLeastSquares(n, points, c);
 
     // freopen output file and write the segments
     freopen(argv[2], "w", stdout);
-    for (const Segment &p : segments) {
+    cout<<Result.first<<'\n';
+    for (const Segment &p : Result.second) {
         cout << p.x1 << " " << p.y1 << " " << p.x2 << " " << p.y2 << "\n";
     }
-
     return 0;
 }
