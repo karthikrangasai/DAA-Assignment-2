@@ -178,7 +178,7 @@ int main(int argc, char const *argv[]) {
 
     // freopen output file and write the segments
     freopen(argv[2], "w", stdout);
-    cout<<Result.first<<'\n';
+    cout<<fixed<<setprecision(10)/*cout*/<<Result.first<<'\n';
     for (const Segment &p : Result.second) {
         cout << p.x1 << " " << p.y1 << " " << p.x2 << " " << p.y2 << "\n";
     }
